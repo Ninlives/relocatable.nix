@@ -23,12 +23,11 @@ After a few seconds you should be able to run chromium by executing `/path/to/ta
 # Requirement
 
 The following commands are required to run the generated script, which should be available on most distros:
-- `realpath`
-- `head`
-- `wc`
-- `tr`
 - `dd`
-- `gzip`
+- `ln`
+- `wc`
 - `sed`
 - `tar`
-- `ln`
+- `head`
+- `gzip`
+- `realpath`
