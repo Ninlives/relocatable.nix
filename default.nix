@@ -1,4 +1,4 @@
-{ closureInfo, writers, runCommand, coreutils, lib }:
+{ closureInfo, writers, runCommand, lib }:
 drv:
 with lib;
 let
@@ -13,26 +13,31 @@ let
   script = "$out/bin/${drv.name}.deploy";
 in runCommand "${drv.name}-deploy" {
   inherit storeDir;
-  buildInputs = [ coreutils ];
 } ''
   mkdir -p $out/bin
-  cat ${./template.head} > ${script}
+  cat ${./template.sh} > ${script}
+  extraVars=$(cat <<EOF
+  ROOT_PATH='${rootPath}'
+  STORE='${storeDir}'
+  RSTORE='${rstoreDir}'
+  STORE_LEN=${toString (stringLength storeDir)}
+  MAX_PATH_LEN=$(${computeMaxPathLength} ${storePaths})
+  EOF
+  )
+  substituteInPlace ${script} \
+    --replace '#VAR_PLACEHOLDER' "$extraVars"
 
-  echo "ROOT_PATH='${rootPath}'" >> ${script}
-  echo "STORE='${storeDir}'"     >> ${script}
-  echo "RSTORE='${rstoreDir}'"   >> ${script}
-  echo "STORE_LEN=${toString (stringLength storeDir)}"           >> ${script}
-  echo "MAX_PATH_LEN='$(${computeMaxPathLength} ${storePaths})'" >> ${script}
+  skip=$(cat ${script}|wc -l)
+  substituteInPlace ${script} \
+    --replace '#SKIP_PLACEHOLDER' "$skip"
 
-  cat ${./template.body} >> ${script}
   tar c \
     --owner=0 \
     --group=0 \
     --mode=u+r,uga+r \
     --hard-dereference \
     -P --transform='s#${storeDir}#${rstoreDir}#g' \
-    -T '${storePaths}'|gzip|base64 >> ${script}
-  cat ${./template.tail}           >> ${script}
+    -T '${storePaths}'|gzip >> ${script}
 
   chmod +x ${script}
 ''
