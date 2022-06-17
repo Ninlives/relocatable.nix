@@ -62,6 +62,7 @@ unpack_data(){
 ensure_exe realpath
 ensure_exe head
 ensure_exe wc
+ensure_exe tr
 ensure_exe dd
 ensure_exe gzip
 ensure_exe sed
