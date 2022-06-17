@@ -64,15 +64,14 @@ unpack_data(){
     ln -s "${link_src}" "${DIR}${ROOT_LINK}"
 }
 
-ensure_exe realpath
-ensure_exe head
-ensure_exe wc
-ensure_exe tr
 ensure_exe dd
-ensure_exe gzip
+ensure_exe ln
+ensure_exe wc
 ensure_exe sed
 ensure_exe tar
-ensure_exe ln
+ensure_exe gzip
+ensure_exe head
+ensure_exe realpath
 
 while getopts 'hd:r:' opt;do
     case "${opt}" in
@@ -101,7 +100,6 @@ ensure_dir
 info "Deploy to ${DIR}."
 me="$(realpath "$0")"
 offset=$(head -n ${SKIP} "${me}"|wc -c)
-compoents=$(( $(echo ${DIR}|tr -d -c '/'|wc -c) - 1 ))
-unpack_data "${me}" "${offset}" ${compoents}
+unpack_data "${me}" "${offset}"
 info "Done"
 exit 0
