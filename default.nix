@@ -1,4 +1,4 @@
-{ closureInfo, writers, runCommand, gnutar, coreutils, lib }:
+{ closureInfo, writers, runCommand, coreutils, lib }:
 drv:
 with lib;
 let
@@ -8,21 +8,31 @@ let
   storePaths = "${closureInfo { rootPaths = drv; }}/store-paths";
   rootPath = normalize "${rstoreDir}${baseNameOf drv}";
   computeMaxPathLength =
-    writers.writePython3 "compute" { flakeIgnore = [ "E501" ]; } (builtins.readFile ./max-path-len.py);
-in runCommand "${drv.name}-deploy" { inherit storeDir; buildInputs = [ gnutar coreutils ]; } ''
+    writers.writePython3 "compute" { flakeIgnore = [ "E501" ]; }
+    (builtins.readFile ./max-path-len.py);
+  script = "$out/bin/${drv.name}.deploy";
+in runCommand "${drv.name}-deploy" {
+  inherit storeDir;
+  buildInputs = [ coreutils ];
+} ''
   mkdir -p $out/bin
-  cat > $out/bin/${drv.name}.deploy << EOF
-  ${builtins.replaceStrings [ "$" "#VAR_PLACEHOLDER" "#DATA_PLACEHOLDER" ] [
-    "\\$"
-    ''
-      ROOT_PATH='${rootPath}'
-      STORE='${storeDir}'
-      RSTORE='${rstoreDir}'
-      STORE_LEN=${toString (stringLength storeDir)}
-      MAX_PATH_LEN='$(${computeMaxPathLength} ${storePaths})'
-    ''
-    "$(tar c --owner=0 --group=0 --mode=u+rw,uga+r --hard-dereference -P --transform='s#${storeDir}#${rstoreDir}#g' -T '${storePaths}'|gzip|base64)"
-  ] (builtins.readFile ./template.sh)}
-  EOF
-  chmod +x $out/bin/${drv.name}.deploy
+  cat ${./template.head} > ${script}
+
+  echo "ROOT_PATH='${rootPath}'" >> ${script}
+  echo "STORE='${storeDir}'"     >> ${script}
+  echo "RSTORE='${rstoreDir}'"   >> ${script}
+  echo "STORE_LEN=${toString (stringLength storeDir)}"           >> ${script}
+  echo "MAX_PATH_LEN='$(${computeMaxPathLength} ${storePaths})'" >> ${script}
+
+  cat ${./template.body} >> ${script}
+  tar c \
+    --owner=0 \
+    --group=0 \
+    --mode=u+r,uga+r \
+    --hard-dereference \
+    -P --transform='s#${storeDir}#${rstoreDir}#g' \
+    -T '${storePaths}'|gzip|base64 >> ${script}
+  cat ${./template.tail}           >> ${script}
+
+  chmod +x ${script}
 ''
