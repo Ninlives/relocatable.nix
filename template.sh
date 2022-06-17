@@ -40,21 +40,26 @@ construct_sed_patterns(){
     if test $DIR_LEN -gt $STORE_LEN;then
         prefix_num=$(( $DIR_LEN - $STORE_LEN ))
         remain_num=$(( $HASH_LEN - $prefix_num ))
-        replace_sed="s#\(${STORE}[0-9a-z]\{${prefix_num}\}\)\([0-9a-z]\{${remain_num}\}\)-#${DIR}\2-#g"
-        transform_sed="s#\(${RSTORE}[0-9a-z]\{${prefix_num}\}\)\([0-9a-z]\{${remain_num}\}\)-#${DIR}\2-#g"
+        replace_sed="s#(${STORE}[0-9a-z]{${prefix_num}})([0-9a-z]{${remain_num}})-#${DIR}\2-#g"
+        rxform_sed="s#${RSTORE}[0-9a-z]{${prefix_num}}##"
+        sxform_sed="s#(${RSTORE}[0-9a-z]{${prefix_num}})([0-9a-z]{${remain_num}})-#${DIR}\2-#"
     else
         prefix_num=$(( $STORE_LEN - $DIR_LEN ))
         prefix=$(printf '%*s' "${prefix_num}"|tr ' ' 'e')
-        replace_sed="s#\(${STORE}\)\([0-9a-z]\{${HASH_LEN}\}\)-#${DIR}${prefix}\2-#g"
-        transform_sed="s#\(${RSTORE}\)\([0-9a-z]\{${HASH_LEN}\}\)-#${DIR}${prefix}\2-#g"
+        replace_sed="s#(${STORE})([0-9a-z]{${HASH_LEN}})-#${DIR}${prefix}\2-#g"
+        rxform_sed="s#${RSTORE}([0-9a-z]{${HASH_LEN}})#${prefix}\1#"
+        sxform_sed="s#(${RSTORE})([0-9a-z]{${HASH_LEN}})-#${DIR}${prefix}\2-#"
     fi
 }
 
 unpack_data(){
     construct_sed_patterns
     info "Unpacking data.."
-    dd if="$1" bs=$2 skip=1|gzip -d|sed "${replace_sed}"|tar x --transform="${transform_sed}" --strip-components=$3 --directory="${DIR}"
-    link_src=$(echo "${ROOT_PATH}"|sed "${transform_sed}")
+    dd if="$1" bs=$2 skip=1|gzip -d|sed -r "${replace_sed}"|tar x \
+        --xform="flags=r;${rxform_sed}x" \
+        --xform="flags=s;${sxform_sed}x" \
+        -C "${DIR}"
+    link_src=$(echo "${ROOT_PATH}"|sed -r "${rxform_sed}")
     info "Creating symbol link: ${DIR}${ROOT_LINK} -> ${DIR}${link_src}."
     ln -s "${link_src}" "${DIR}${ROOT_LINK}"
 }
