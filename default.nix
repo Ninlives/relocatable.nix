@@ -10,10 +10,10 @@ let
   computeMaxPathLength =
     writers.writePython3 "compute" { flakeIgnore = [ "E501" ]; }
     (builtins.readFile ./max-path-len.py);
-  script = "$out/bin/${drv.name}.deploy";
-in runCommand "${drv.name}-deploy" {
-  inherit storeDir;
-} ''
+  computeOffset =
+    writers.writePython3 "compute" { } (builtins.readFile ./offset.py);
+  script = "${placeholder "out"}/bin/${drv.name}.deploy";
+in runCommand "${drv.name}-deploy" { } ''
   mkdir -p $out/bin
   cat ${./template.sh} > ${script}
   extraVars=$(cat <<EOF
@@ -21,15 +21,19 @@ in runCommand "${drv.name}-deploy" {
   STORE='${storeDir}'
   RSTORE='${rstoreDir}'
   STORE_LEN=${toString (stringLength storeDir)}
-  MAX_PATH_LEN=$(${computeMaxPathLength} ${storePaths})
+  MAX_PATH_LEN=$(${computeMaxPathLength} '${storePaths}' '${storeDir}')
   EOF
   )
-  substituteInPlace ${script} \
+  substituteInPlace '${script}' \
     --replace '#VAR_PLACEHOLDER' "$extraVars"
 
-  skip=$(cat ${script}|wc -l)
-  substituteInPlace ${script} \
+  skip=$(cat '${script}'|wc -l)
+  substituteInPlace '${script}' \
     --replace '#SKIP_PLACEHOLDER' "$skip"
+
+  offset=$(${computeOffset} '${script}' '#OFFSET_PLACEHOLDER')
+  substituteInPlace '${script}' \
+    --replace '#OFFSET_PLACEHOLDER' "$offset"
 
   tar c \
     --owner=0 \
@@ -39,5 +43,5 @@ in runCommand "${drv.name}-deploy" {
     -P --transform='s#${storeDir}#${rstoreDir}#g' \
     -T '${storePaths}'|gzip >> ${script}
 
-  chmod +x ${script}
+  chmod +x '${script}'
 ''

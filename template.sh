@@ -1,6 +1,7 @@
 #!/bin/sh
 set -e -u
 SKIP=#SKIP_PLACEHOLDER
+OFFSET=#OFFSET_PLACEHOLDER
 DIR=""
 ROOT_LINK='root'
 HASH_LEN=32
@@ -66,11 +67,9 @@ unpack_data(){
 
 ensure_exe dd
 ensure_exe ln
-ensure_exe wc
 ensure_exe sed
 ensure_exe tar
 ensure_exe gzip
-ensure_exe head
 ensure_exe realpath
 
 while getopts 'hd:r:' opt;do
@@ -99,7 +98,6 @@ fi
 ensure_dir
 info "Deploy to ${DIR}."
 me="$(realpath "$0")"
-offset=$(head -n ${SKIP} "${me}"|wc -c)
-unpack_data "${me}" "${offset}"
+unpack_data "${me}" "${OFFSET}"
 info "Done"
 exit 0

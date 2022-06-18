@@ -1,15 +1,13 @@
-import os
 import sys
 
-store_dir_len = len(os.environ['storeDir'])
 hash_len = 32
 
 
-def get_hashes(file):
+def get_hashes(store_paths_file, store_dir):
     hashes = []
-    with open(file) as f:
+    with open(store_paths_file) as f:
         for path in f.readlines():
-            hashes.append(path[:store_dir_len + hash_len])
+            hashes.append(path[:len(store_dir) + hash_len])
     return hashes
 
 
@@ -29,9 +27,11 @@ def get_unique_suffix_len(hashes):
 
 
 def main():
-    hashes = get_hashes(sys.argv[1])
+    store_paths_file = sys.argv[1]
+    store_dir = sys.argv[2]
+    hashes = get_hashes(store_paths_file, store_dir)
     unique_suffix_len = get_unique_suffix_len(hashes)
-    print(store_dir_len + hash_len - unique_suffix_len, end='')
+    print(len(store_dir) + hash_len - unique_suffix_len, end='')
 
 
 if __name__ == '__main__':
