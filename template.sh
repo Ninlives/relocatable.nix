@@ -6,7 +6,7 @@ DIR=""
 ROOT_LINK='root'
 HASH_LEN=32
 #VAR_PLACEHOLDER
-err() { echo "ERROR: $1"; }
+err() { echo "ERROR: $1" 1>&2; }
 info(){ echo "INFO:  $1"; }
 
 usage(){
@@ -16,6 +16,27 @@ usage(){
     echo "    -r    The name of the symbol link to the root store path. DEFAULT: root."
     echo "    -h    Show this message."
     exit 0
+}
+
+realpath() {
+    if test -d "$1"; then
+        (cd "$1"; pwd)
+    elif test -f "$1"; then
+        case "$1" in
+            '/'*)
+                echo "$1"
+                ;;
+            *'/'*)
+                echo "$(cd "${1%/*}"; pwd)/${1##*/}"
+                ;;
+            *)
+                echo "$(pwd)/$1"
+                ;;
+        esac
+    else
+        err "File or directory '$1' does not exist."
+        exit 1
+    fi
 }
 
 ensure_dir(){
@@ -70,7 +91,6 @@ ensure_exe ln
 ensure_exe sed
 ensure_exe tar
 ensure_exe gzip
-ensure_exe realpath
 
 while getopts 'hd:r:' opt;do
     case "${opt}" in

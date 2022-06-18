@@ -28,4 +28,3 @@ The following commands are required to run the generated script, which should be
 - `sed`
 - `tar`
 - `gzip`
-- `realpath`
