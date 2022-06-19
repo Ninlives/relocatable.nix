@@ -1,11 +1,18 @@
 #!/bin/sh
 set -e -u
-SKIP=#SKIP_PLACEHOLDER
-OFFSET=#OFFSET_PLACEHOLDER
-DIR=""
+SHA256SUM='#SHA256SUMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX#'
+OFFSET=#OFFSET#
+ROOT_PATH='#ROOT_PATH#'
+STORE='#STORE#'
+RSTORE='#RSTORE#'
+STORE_LEN=#STORE_LEN#
+MAX_PATH_LEN=#MAX_PATH_LEN#
+
+ME=''
+DIR=''
 ROOT_LINK='root'
 HASH_LEN=32
-#VAR_PLACEHOLDER
+
 err() { echo "ERROR: $1" 1>&2; }
 info(){ echo "INFO:  $1"; }
 
@@ -15,7 +22,20 @@ usage(){
     echo "    -d    The target directory."
     echo "    -r    The name of the symbol link to the root store path. DEFAULT: root."
     echo "    -h    Show this message."
+    echo "    -v    Check integrity."
     exit 0
+}
+
+check_integrity(){
+    info 'Check integrity.'
+    sum=$(dd if="${ME}" 2> /dev/null|sed "s#${SHA256SUM}##"|sha256sum)
+    if test "${sum}" = "${SHA256SUM}";then
+        info 'No error detected.'
+        exit 0
+    else
+        err 'Looks like the file is corrupted!'
+        exit 1
+    fi
 }
 
 realpath() {
@@ -86,13 +106,9 @@ unpack_data(){
     ln -s "${link_src}" "${DIR}${ROOT_LINK}"
 }
 
-ensure_exe dd
-ensure_exe ln
-ensure_exe sed
-ensure_exe tar
-ensure_exe gzip
+ME="$(realpath "$0")"
 
-while getopts 'hd:r:' opt;do
+while getopts 'hvd:r:' opt;do
     case "${opt}" in
         d)
             DIR="$(realpath "${OPTARG}")/"
@@ -102,6 +118,11 @@ while getopts 'hd:r:' opt;do
             ;;
         h)
             usage
+            ;;
+        v) 
+            ensure_exe sed
+            ensure_exe sha256sum
+            check_integrity
             ;;
         *)
             usage
@@ -115,9 +136,14 @@ if test -z "${DIR}";then
     usage
 fi
 
+ensure_exe dd
+ensure_exe ln
+ensure_exe sed
+ensure_exe tar
+ensure_exe gzip
 ensure_dir
+
 info "Deploy to ${DIR}."
-me="$(realpath "$0")"
 unpack_data "${me}" "${OFFSET}"
 info "Done"
 exit 0

@@ -16,24 +16,16 @@ let
 in runCommand "${drv.name}-deploy" { } ''
   mkdir -p $out/bin
   cat ${./template.sh} > ${script}
-  extraVars=$(cat <<EOF
-  ROOT_PATH='${rootPath}'
-  STORE='${storeDir}'
-  RSTORE='${rstoreDir}'
-  STORE_LEN=${toString (stringLength storeDir)}
-  MAX_PATH_LEN=$(${computeMaxPathLength} '${storePaths}' '${storeDir}')
-  EOF
-  )
-  substituteInPlace '${script}' \
-    --replace '#VAR_PLACEHOLDER' "$extraVars"
 
-  skip=$(cat '${script}'|wc -l)
   substituteInPlace '${script}' \
-    --replace '#SKIP_PLACEHOLDER' "$skip"
+    --replace '#ROOT_PATH#'    '${rootPath}' \
+    --replace '#STORE#'        '${storeDir}' \
+    --replace '#RSTORE#'       '${rstoreDir}' \
+    --replace '#STORE_LEN#'    '${toString (stringLength storeDir)}' \
+    --replace '#MAX_PATH_LEN#' "$(${computeMaxPathLength} '${storePaths}' '${storeDir}')"
 
-  offset=$(${computeOffset} '${script}' '#OFFSET_PLACEHOLDER')
   substituteInPlace '${script}' \
-    --replace '#OFFSET_PLACEHOLDER' "$offset"
+    --replace '#OFFSET#' "$(${computeOffset} '${script}' '#OFFSET#')"
 
   tar c \
     --owner=0 \
@@ -42,6 +34,10 @@ in runCommand "${drv.name}-deploy" { } ''
     --hard-dereference \
     -P --transform='s#${storeDir}#${rstoreDir}#g' \
     -T '${storePaths}'|gzip >> ${script}
+
+  HASH_PLACEHOLDER='#SHA256SUMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX#'
+  HASH=$(dd if='${script}'|sed -r "s/$HASH_PLACEHOLDER//"|sha256sum)
+  sed -i -e "s/$HASH_PLACEHOLDER/$HASH/" '${script}'
 
   chmod +x '${script}'
 ''
