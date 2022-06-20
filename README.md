@@ -44,3 +44,4 @@ The following commands are required to run the deployment operation, which shoul
 The following commands are required for integrity verification:
 - `dd`
 - `sed`
+- `sha256sum`
