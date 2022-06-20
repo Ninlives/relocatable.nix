@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e -u
-SHA256SUM='#SHA256SUMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX#'
+SHA256SUM='#SHA256SUMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX#'
 OFFSET=#OFFSET#
 ROOT_PATH='#ROOT_PATH#'
 STORE='#STORE#'
@@ -10,6 +10,8 @@ MAX_PATH_LEN=#MAX_PATH_LEN#
 
 ME=''
 DIR=''
+SSH_SERVER=''
+SSH_OPTION=''
 ROOT_LINK='root'
 HASH_LEN=32
 
@@ -20,9 +22,11 @@ usage(){
     echo "Usage: $0 [OPTION...]"
     echo "Available Options:"
     echo "    -d    The target directory."
+    echo "    -s    Set the remote ssh server for deployment."
+    echo "    -o    Extra command line options passed to ssh."
     echo "    -r    The name of the symbol link to the root store path. DEFAULT: root."
+    echo "    -v    Verify integrity."
     echo "    -h    Show this message."
-    echo "    -v    Check integrity."
     exit 0
 }
 
@@ -97,7 +101,7 @@ construct_sed_patterns(){
 unpack_data(){
     construct_sed_patterns
     info "Unpacking data.."
-    dd if="$1" bs=$2 skip=1|gzip -d|sed -r "${replace_sed}"|tar x \
+    dd if="${ME}" bs=${OFFSET} skip=1 2> /dev/null|gzip -d|sed -r "${replace_sed}"|tar x \
         --xform="flags=r;${rxform_sed}x" \
         --xform="flags=s;${sxform_sed}x" \
         -C "${DIR}"
@@ -106,24 +110,46 @@ unpack_data(){
     ln -s "${link_src}" "${DIR}${ROOT_LINK}"
 }
 
+execute_remote(){
+    exe="${DIR}/deploy"
+    dd if="${ME}" 2> /dev/null|ssh ${SSH_OPTION} "${SSH_SERVER}" \
+    "dd of='${exe}' && chmod +x '${exe}' && ${exe} -d '${DIR}' -r '${ROOT_LINK}' && rm '${exe}'"
+    exit $?
+}
+
+execute_local(){
+    DIR="$(realpath "${DIR}")/"
+    ensure_dir
+    info "Deploy to ${DIR}."
+    unpack_data
+    info "Done"
+    exit 0
+}
+
 ME="$(realpath "$0")"
 
-while getopts 'hvd:r:' opt;do
+while getopts 'hvd:s:o:r:' opt;do
     case "${opt}" in
         d)
-            DIR="$(realpath "${OPTARG}")/"
+            DIR="${OPTARG}"
             ;;
         r)
             ROOT_LINK="${OPTARG}"
             ;;
-        h)
-            usage
+        s)
+            SSH_SERVER="${OPTARG}"
+            ;;
+        o)
+            SSH_OPTION="${OPTARG}"
             ;;
         v) 
             ensure_exe dd
             ensure_exe sed
             ensure_exe sha256sum
             check_integrity
+            ;;
+        h)
+            usage
             ;;
         *)
             usage
@@ -137,14 +163,17 @@ if test -z "${DIR}";then
     usage
 fi
 
-ensure_exe dd
-ensure_exe ln
-ensure_exe sed
-ensure_exe tar
-ensure_exe gzip
-ensure_dir
-
-info "Deploy to ${DIR}."
-unpack_data "${ME}" "${OFFSET}"
-info "Done"
-exit 0
+if test -n "${SSH_SERVER}";then
+    ensure_exe dd
+    ensure_exe ssh
+    info "Execute on ${SSH_SERVER}"
+    execute_remote
+else
+    ensure_exe dd
+    ensure_exe ln
+    ensure_exe sed
+    ensure_exe tar
+    ensure_exe gzip
+    execute_local
+fi
+exit 127

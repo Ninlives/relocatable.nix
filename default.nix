@@ -35,7 +35,7 @@ in runCommand "${drv.name}-deploy" { } ''
     -P --transform='s#${storeDir}#${rstoreDir}#g' \
     -T '${storePaths}'|gzip >> ${script}
 
-  HASH_PLACEHOLDER='#SHA256SUMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX#'
+  HASH_PLACEHOLDER='#SHA256SUMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX#'
   HASH=$(dd if='${script}'|sed -r "s/$HASH_PLACEHOLDER//"|sha256sum)
   sed -i -e "s/$HASH_PLACEHOLDER/$HASH/" '${script}'
 

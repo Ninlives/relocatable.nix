@@ -4,7 +4,7 @@ This flake provide a nix bundler to package nix derivations into a single script
 # Benefits
 
 - Do not need root access or `nix` for deployment.
-- The deployed derivation does not rely on `userns` or `proot`, etc., to execute.
+- The deployed derivation does not rely on `userns` (which requires a kernel with `CAP_SYS_USER_NS` and relevant permissions) or `proot` (which may significantly impact the performance), etc., to execute.
 
 # Usage
 
@@ -24,6 +24,13 @@ To deploy chromium on another machine, copy the script and execute the following
 ```
 After a few seconds you should be able to run chromium by executing `/path/to/target/directory/root/bin/chromium`.
 
+## Deploy to Remote Server
+
+Use the `-s` option to specify a ssh server as the target for deployment, i.e. :
+```sh
+./chromium-<version>.deploy -s <user>@<host> -o 'additional ssh options' -d /path/to/remote/target/directory
+```
+
 ## Verify Integrity
 
 To verify the integrity of the above script, just run:
@@ -40,6 +47,14 @@ The following commands are required to run the deployment operation, which shoul
 - `sed`
 - `tar`
 - `gzip`
+
+To deploy to a remote server, the following commands are required on the local machine:
+- `dd`
+- `ssh`
+
+The following commands are used on the remote server in addition to above commands:
+- `chmod`
+- `rm`
 
 The following commands are required for integrity verification:
 - `dd`
