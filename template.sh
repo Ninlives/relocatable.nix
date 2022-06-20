@@ -73,7 +73,7 @@ ensure_dir(){
 
 ensure_exe(){
     if ! type "$1" > /dev/null;then
-        err "$1 is required by this script."
+        err "$1 is required by this operation."
         exit 1
     fi
 }
@@ -120,6 +120,7 @@ while getopts 'hvd:r:' opt;do
             usage
             ;;
         v) 
+            ensure_exe dd
             ensure_exe sed
             ensure_exe sha256sum
             check_integrity
