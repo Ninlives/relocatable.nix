@@ -144,6 +144,6 @@ ensure_exe gzip
 ensure_dir
 
 info "Deploy to ${DIR}."
-unpack_data "${me}" "${OFFSET}"
+unpack_data "${ME}" "${OFFSET}"
 info "Done"
 exit 0
