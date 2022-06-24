@@ -31,6 +31,22 @@ Use the `-s` option to specify a ssh server as the target for deployment, i.e. :
 ./chromium-<version>.deploy -s <user>@<host> -o 'additional ssh options' -d /path/to/remote/target/directory
 ```
 
+## Update an Existing Deployment
+
+Deployment will not overwrite existing files, by default they will produce error messages.
+And it will not try to replace existing symlink to the root path (which is `/path/to/target/directory/root` by default).
+However, if you are trying to update an existing deployment, specify a `-u` flag, i.e.:
+```sh
+./chromium-<version>.deploy -d /path/to/target/directory -u
+```
+The script will skip the existing files and replace the symlink to point to the new root path.
+This may increase the disk usage if some old paths are no longer used.
+
+**NOTE** the new deployment may contain store paths that are different from the previous deployment but extracted to same paths,
+skip these paths may cause unknown problems.
+This is because the hash part in the store paths will be cut off according to the target directory in order to keep the length.
+In case of any problems, try delete all paths and perform fresh deployment again.
+
 ## Verify Integrity
 
 To verify the integrity of the above script, just run:

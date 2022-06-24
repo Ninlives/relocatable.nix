@@ -12,6 +12,7 @@ ME=''
 DIR=''
 SSH_SERVER=''
 SSH_OPTION=''
+UPDATE=''
 ROOT_LINK='root'
 HASH_LEN=32
 
@@ -25,6 +26,7 @@ usage(){
     echo "    -s    Set the remote ssh server for deployment."
     echo "    -o    Extra command line options passed to ssh."
     echo "    -r    The name of the symbol link to the root store path. DEFAULT: root."
+    echo "    -u    Use update mode."
     echo "    -v    Verify integrity."
     echo "    -h    Show this message."
     exit 0
@@ -100,14 +102,31 @@ construct_sed_patterns(){
 
 unpack_data(){
     construct_sed_patterns
+    if test -z "${UPDATE}";then
+        extra_tar_flags='--keep-old-files'
+        extra_link_flags=''
+    else
+        extra_tar_flags='--skip-old-files'
+        extra_link_flags='-f'
+    fi
     info "Unpacking data.."
     dd if="${ME}" bs=${OFFSET} skip=1 2> /dev/null|gzip -d|sed -r "${replace_sed}"|tar x \
         --xform="flags=r;${rxform_sed}x" \
         --xform="flags=s;${sxform_sed}x" \
+        ${extra_tar_flags} \
         -C "${DIR}"
-    link_src=$(echo "${ROOT_PATH}"|sed -r "${rxform_sed}")
-    info "Creating symbol link: ${DIR}${ROOT_LINK} -> ${DIR}${link_src}."
-    ln -s "${link_src}" "${DIR}${ROOT_LINK}"
+    link_src="${DIR}$(echo "${ROOT_PATH}"|sed -r "${rxform_sed}")"
+    link_dst="${DIR}${ROOT_LINK}"
+    info "Creating symbol link: ${link_dst} -> ${link_src}."
+    if test -L "${link_dst}";then
+        if test -z "${UPDATE}";then
+            err "${link_dst} already exists."
+            exit 1
+        else
+            chmod +w "${link_dst}"
+        fi
+    fi
+    ln -s ${extra_link_flags} "${link_src}" "${link_dst}"
 }
 
 execute_remote(){
@@ -128,7 +147,7 @@ execute_local(){
 
 ME="$(realpath "$0")"
 
-while getopts 'hvd:s:o:r:' opt;do
+while getopts 'huvd:s:o:r:' opt;do
     case "${opt}" in
         d)
             DIR="${OPTARG}"
@@ -141,6 +160,9 @@ while getopts 'hvd:s:o:r:' opt;do
             ;;
         o)
             SSH_OPTION="${OPTARG}"
+            ;;
+        u)
+            UPDATE=1
             ;;
         v) 
             ensure_exe dd
