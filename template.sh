@@ -16,7 +16,6 @@ SSH_OPTION=''
 UPDATE=''
 ROOT_LINK='root'
 HASH_LEN=32
-RUN_LOCAL=''
 
 err() { echo "ERROR: $1" 1>&2; }
 info(){ echo "INFO:  $1"; }
@@ -27,7 +26,6 @@ usage(){
     echo "    -d    The target directory."
     echo "    -s    Set the remote ssh server for deployment."
     echo "    -o    Extra command line options passed to ssh."
-    echo "    -l    Force to run locally (ignore \`-s\` and \`-o\`)"
     echo "    -r    The name of the symbol link to the root store path. DEFAULT: root."
     echo "    -u    Use update mode."
     echo "    -v    Verify integrity."
@@ -135,7 +133,7 @@ unpack_data(){
 execute_remote(){
     exe="${DIR}/deploy"
     dd if="${ME}" 2> /dev/null|ssh ${SSH_OPTION} "${SSH_SERVER}" \
-    "dd of='${exe}' && chmod +x '${exe}' && ${exe} ${ARGS} -l && rm '${exe}'"
+    "dd of='${exe}' && chmod +x '${exe}' && ${exe} -d '${DIR}' -r '${ROOT_LINK}' $(if test -n "${UPDATE}";then echo '-u';fi) && rm '${exe}'"
     exit $?
 }
 
@@ -173,9 +171,6 @@ while getopts 'lhuvd:s:o:r:' opt;do
             ensure_exe sha256sum
             check_integrity
             ;;
-        l)
-            RUN_LOCAL=1
-            ;;
         h)
             usage
             ;;
@@ -191,7 +186,7 @@ if test -z "${DIR}";then
     usage
 fi
 
-if test -z "${RUN_LOCAL}" -a -n "${SSH_SERVER}";then
+if test -n "${SSH_SERVER}";then
     ensure_exe dd
     ensure_exe ssh
     info "Execute on ${SSH_SERVER}"
