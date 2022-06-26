@@ -124,7 +124,7 @@ unpack_data(){
             err "${link_dst} already exists."
             exit 1
         else
-            chmod +w "${link_dst}"
+            rm "${link_dst}"
         fi
     fi
     ln -s ${extra_link_flags} "${link_src}" "${link_dst}"
